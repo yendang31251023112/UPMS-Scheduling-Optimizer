@@ -1,5 +1,5 @@
 """
-fake_data.py - DỮ LIỆU GIẢ để Lâm vẽ thử biểu đồ khi chưa có code thật của Yến/Tuấn/Ngân.
+fake_data.py - DỮ LIỆU GIẢ để tui vẽ thử biểu đồ khi chưa có code thật của Yến/Tuấn/Ngân.
 Khi ghép code thật thì KHÔNG cần file này nữa (chỉ dùng để demo).
 
 Trả về dict `result` đúng theo "hợp đồng dữ liệu" của nhóm:

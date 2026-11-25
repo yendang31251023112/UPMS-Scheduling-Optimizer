@@ -1,5 +1,5 @@
 """
-main_window.py - BẢN PHÁC THẢO cửa sổ chính (TV3 - Lâm).
+main_window.py - BẢN PHÁC THẢO cửa sổ chính - Lâm.
 
 Bố cục:
     Bên trái : chọn bộ dữ liệu (Small/Medium/Large), chọn thuật toán, nút "Chạy"

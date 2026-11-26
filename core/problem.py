@@ -326,9 +326,54 @@ class UPMSProblem:
             "processing_times": self.processing_times,
         }
 
+    def validate_benchmark_bounds(
+        self,
+        min_time: float = PROCESSING_TIME_MIN,
+        max_time: float = PROCESSING_TIME_MAX,
+    ) -> None:
+        """
+        Kiểm tra ma trận thời gian xử lý có tuân thủ đúng quy chuẩn miền giá trị
+        thực nghiệm của đồ án [min_time, max_time] hay không.
+        Được gọi bởi Dataset Loader hoặc trước khi thực hiện benchmark chính thức.
+        """
+        if type(min_time) is bool or not isinstance(min_time, (int, float)) or not math.isfinite(min_time):
+            raise TypeError(f"min_time phải là số thực hữu hạn, nhận: {min_time} (kiểu {type(min_time).__name__})")
+        if type(max_time) is bool or not isinstance(max_time, (int, float)) or not math.isfinite(max_time):
+            raise TypeError(f"max_time phải là số thực hữu hạn, nhận: {max_time} (kiểu {type(max_time).__name__})")
+        if min_time < 0.0:
+            raise ValueError(f"min_time không được âm, nhận: {min_time}")
+        if min_time > max_time:
+            raise ValueError(f"min_time ({min_time}) không được lớn hơn max_time ({max_time})")
+
+        for i, row in enumerate(self.processing_times):
+            for j, val in enumerate(row):
+                if not (min_time <= val <= max_time):
+                    raise ValueError(
+                        f"Thời gian xử lý P[{i}][{j}] = {val} nằm ngoài phạm vi benchmark "
+                        f"quy định [{min_time}, {max_time}]."
+                    )
+
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "UPMSProblem":
-        """Khởi tạo bài toán từ dictionary nạp từ file JSON."""
+    def from_dict(cls, data: Any) -> "UPMSProblem":
+        """
+        Khởi tạo bài toán từ dictionary nạp từ file JSON.
+        Xác thực cấu trúc schema nghiêm ngặt: đúng 3 trường 'num_jobs', 'num_machines', 'processing_times'.
+        """
+        if not isinstance(data, dict):
+            raise TypeError(f"Dữ liệu khởi tạo bài toán phải là một dictionary, nhận được: {type(data).__name__}")
+
+        required_keys = {"num_jobs", "num_machines", "processing_times"}
+        actual_keys = set(data.keys())
+        if actual_keys != required_keys:
+            missing = required_keys - actual_keys
+            extra = actual_keys - required_keys
+            msg_parts = []
+            if missing:
+                msg_parts.append(f"thiếu các trường {sorted(missing)}")
+            if extra:
+                msg_parts.append(f"chứa các trường thừa {sorted(extra)}")
+            raise ValueError(f"Dữ liệu bài toán không đúng schema: {' và '.join(msg_parts)}")
+
         return cls(
             num_jobs=data["num_jobs"],
             num_machines=data["num_machines"],
@@ -376,9 +421,19 @@ def validate_result_contract(
         raise TypeError(f"Kết quả phải là một dictionary, nhận được: {type(result).__name__}")
 
     required_keys = {"assignment", "makespan", "schedule", "convergence", "runtime", "evaluation_count"}
-    missing_keys = required_keys - set(result.keys())
-    if missing_keys:
-        raise ValueError(f"Kết quả thiếu các trường bắt buộc: {missing_keys}")
+    actual_keys = set(result.keys())
+    if actual_keys != required_keys:
+        missing = required_keys - actual_keys
+        extra = actual_keys - required_keys
+        msg_parts = []
+        if missing:
+            msg_parts.append(f"thiếu các trường bắt buộc {sorted(missing)}")
+        if extra:
+            msg_parts.append(f"chứa các trường thừa không được phép {sorted(extra)}")
+        raise ValueError(
+            f"Result contract vi phạm: {' và '.join(msg_parts)}. "
+            f"Kết quả phải chứa chính xác 6 trường: {sorted(required_keys)}"
+        )
 
     # 1. Kiểm tra assignment
     assignment = result["assignment"]

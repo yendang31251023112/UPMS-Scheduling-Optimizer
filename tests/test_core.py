@@ -79,10 +79,10 @@ class TestCoreConfig(unittest.TestCase):
         self.assertEqual(WOA_B, 1.0)
         self.assertEqual(WOA_A_MAX, 2.0)
         self.assertEqual(WOA_A_MIN, 0.0)
-        self.assertEqual(WOA_VARIANTS, ("baseline", "reinit", "cosine", "quadratic"))
+        self.assertEqual(WOA_VARIANTS, ("baseline",))
         self.assertEqual(len(BENCHMARK_SEEDS), 30)
         self.assertEqual(BENCHMARK_RUNS, 30)
-        self.assertEqual(TOTAL_BENCHMARK_RUNS, 450)
+        self.assertEqual(TOTAL_BENCHMARK_RUNS, 180)
         self.assertEqual(STATISTICAL_ALPHA, 0.05)
 
         # Chạy kiểm tra tính nhất quán toán học
@@ -99,30 +99,44 @@ class TestCoreConfig(unittest.TestCase):
             cfg.GA_PC = original_pc
 
     def test_validate_config_rejects_invalid_woa_variants(self):
-        """Kiểm tra validate_config() chặn WOA_VARIANTS trùng lặp hoặc sai tên."""
+        """Kiểm tra validate_config() chặn WOA_VARIANTS có cấu hình không đúng quy ước."""
         original_variants = cfg.WOA_VARIANTS
         try:
-            # Trùng tên
-            cfg.WOA_VARIANTS = ("baseline", "baseline", "cosine", "quadratic")
+            # Rỗng hoặc nhiều hơn 1 cấu hình
+            cfg.WOA_VARIANTS = ("baseline", "extra")
             with self.assertRaises(ValueError):
                 cfg.validate_config()
 
             # Sai tên
-            cfg.WOA_VARIANTS = ("baseline", "reinit", "cosine", "invalid_variant")
+            cfg.WOA_VARIANTS = ("invalid_variant",)
             with self.assertRaises(ValueError):
                 cfg.validate_config()
         finally:
             cfg.WOA_VARIANTS = original_variants
 
     def test_validate_config_rejects_invalid_datasets(self):
-        """Kiểm tra validate_config() chặn dataset có num_jobs <= 0."""
+        """Kiểm tra validate_config() chặn dataset có num_jobs <= 0 khi vẫn có đủ 3 datasets."""
+        original_ds = cfg.BENCHMARK_DATASETS
+        try:
+            invalid_ds = {k: dict(v) for k, v in original_ds.items()}
+            invalid_ds["small"]["num_jobs"] = 0
+            cfg.BENCHMARK_DATASETS = invalid_ds
+            with self.assertRaises(ValueError) as ctx:
+                cfg.validate_config()
+            self.assertIn("num_jobs phải là số nguyên > 0", str(ctx.exception))
+        finally:
+            cfg.BENCHMARK_DATASETS = original_ds
+
+    def test_validate_config_rejects_missing_dataset_keys(self):
+        """Kiểm tra validate_config() chặn cấu hình thiếu một trong 3 datasets bắt buộc."""
         original_ds = cfg.BENCHMARK_DATASETS
         try:
             cfg.BENCHMARK_DATASETS = {
-                "small": {"num_jobs": 0, "num_machines": 3, "filename": "s.json"}
+                "small": {"num_jobs": 10, "num_machines": 3, "filename": "small_10x3.json"}
             }
-            with self.assertRaises(ValueError):
+            with self.assertRaises(ValueError) as ctx:
                 cfg.validate_config()
+            self.assertIn("phải có chính xác 3 datasets", str(ctx.exception))
         finally:
             cfg.BENCHMARK_DATASETS = original_ds
 
@@ -139,6 +153,66 @@ class TestCoreConfig(unittest.TestCase):
                 cfg.validate_config()
         finally:
             cfg.STATISTICAL_ALPHA = original_alpha
+
+    def test_validate_config_rejects_invalid_convergence_points(self):
+        """Kiểm tra validate_config() chặn CONVERGENCE_POINTS <= 0 hoặc sai kiểu."""
+        original_cp = cfg.CONVERGENCE_POINTS
+        try:
+            cfg.CONVERGENCE_POINTS = 0
+            with self.assertRaises(ValueError):
+                cfg.validate_config()
+
+            cfg.CONVERGENCE_POINTS = "200"
+            with self.assertRaises(ValueError):
+                cfg.validate_config()
+        finally:
+            cfg.CONVERGENCE_POINTS = original_cp
+
+    def test_validate_config_rejects_invalid_param_study(self):
+        """Kiểm tra validate_config() chặn các giá trị khảo sát tham số GA sai miền hoặc trùng lặp."""
+        original_pc_study = cfg.GA_PARAM_STUDY_PC
+        original_pm_study = cfg.GA_PARAM_STUDY_PM
+        original_k_study = cfg.GA_PARAM_STUDY_K
+        try:
+            # Sai miền giá trị
+            cfg.GA_PARAM_STUDY_PC = (0.5, 1.5)  # 1.5 > 1.0
+            with self.assertRaises(ValueError):
+                cfg.validate_config()
+
+            cfg.GA_PARAM_STUDY_K = (0, 3)  # k < 1
+            with self.assertRaises(ValueError):
+                cfg.validate_config()
+
+            # Trùng lặp giá trị
+            cfg.GA_PARAM_STUDY_PC = (0.6, 0.7, 0.6)
+            with self.assertRaises(ValueError):
+                cfg.validate_config()
+
+            cfg.GA_PARAM_STUDY_PM = (0.01, 0.05, 0.01)
+            with self.assertRaises(ValueError):
+                cfg.validate_config()
+
+            cfg.GA_PARAM_STUDY_K = (2, 3, 2)
+            with self.assertRaises(ValueError):
+                cfg.validate_config()
+        finally:
+            cfg.GA_PARAM_STUDY_PC = original_pc_study
+            cfg.GA_PARAM_STUDY_PM = original_pm_study
+            cfg.GA_PARAM_STUDY_K = original_k_study
+
+    def test_validate_config_rejects_path_traversal_filename(self):
+        """Kiểm tra validate_config() chặn filename chứa đường dẫn thư mục."""
+        original_ds = cfg.BENCHMARK_DATASETS
+        try:
+            cfg.BENCHMARK_DATASETS = {
+                "small": {"num_jobs": 10, "num_machines": 3, "filename": "../secret.json"},
+                "medium": {"num_jobs": 30, "num_machines": 5, "filename": "medium_30x5.json"},
+                "large": {"num_jobs": 100, "num_machines": 10, "filename": "large_100x10.json"},
+            }
+            with self.assertRaises(ValueError):
+                cfg.validate_config()
+        finally:
+            cfg.BENCHMARK_DATASETS = original_ds
 
 
 class TestUPMSProblem(unittest.TestCase):
@@ -279,6 +353,46 @@ class TestUPMSProblem(unittest.TestCase):
         self.assertEqual(self.problem.num_jobs, restored.num_jobs)
         self.assertEqual(self.problem.num_machines, restored.num_machines)
         self.assertEqual(self.problem.processing_times, restored.processing_times)
+
+    def test_from_dict_schema_validation(self):
+        """Kiểm tra from_dict() xác thực cấu trúc schema nghiêm ngặt."""
+        # Không phải dict
+        with self.assertRaises(TypeError):
+            UPMSProblem.from_dict([1, 2, 3])
+        # Thiếu trường
+        with self.assertRaises(ValueError):
+            UPMSProblem.from_dict({"num_jobs": 2, "num_machines": 2})
+        # Thừa trường
+        valid_dict = self.problem.to_dict()
+        valid_dict["extra_key"] = "bad"
+        with self.assertRaises(ValueError):
+            UPMSProblem.from_dict(valid_dict)
+
+    def test_validate_benchmark_bounds(self):
+        """Kiểm tra validate_benchmark_bounds() phát hiện thời gian ngoài [10, 100]."""
+        # Hợp lệ (10-100)
+        p_valid = UPMSProblem(2, 2, [[10.0, 50.0], [80.0, 100.0]])
+        p_valid.validate_benchmark_bounds(10.0, 100.0)
+
+        # Quá nhỏ (< 10)
+        p_low = UPMSProblem(2, 2, [[5.0, 50.0], [80.0, 100.0]])
+        with self.assertRaises(ValueError):
+            p_low.validate_benchmark_bounds(10.0, 100.0)
+
+        # Quá lớn (> 100)
+        p_high = UPMSProblem(2, 2, [[10.0, 50.0], [80.0, 150.0]])
+        with self.assertRaises(ValueError):
+            p_high.validate_benchmark_bounds(10.0, 100.0)
+
+        # Tham số min_time / max_time không hợp lệ
+        with self.assertRaises(TypeError):
+            p_valid.validate_benchmark_bounds(min_time="10.0")
+        with self.assertRaises(TypeError):
+            p_valid.validate_benchmark_bounds(min_time=True)
+        with self.assertRaises(ValueError):
+            p_valid.validate_benchmark_bounds(min_time=-1.0)
+        with self.assertRaises(ValueError):
+            p_valid.validate_benchmark_bounds(min_time=100.0, max_time=50.0)
 
 
 class TestEvaluator(unittest.TestCase):
@@ -528,6 +642,23 @@ class TestResultContract(unittest.TestCase):
         # max_evaluations không hợp lệ (<= 0)
         with self.assertRaises(ValueError):
             validate_result_contract(result, self.problem, expected_convergence_len=200, max_evaluations=0)
+
+
+    def test_validate_result_contract_rejects_extra_fields(self):
+        """Kiểm tra validate_result_contract() phát hiện và từ chối result có trường thừa."""
+        result = self._create_valid_result()
+        result["extra_field"] = "unexpected_data"
+        with self.assertRaises(ValueError) as ctx:
+            validate_result_contract(result, self.problem, expected_convergence_len=200)
+        self.assertIn("chứa các trường thừa không được phép", str(ctx.exception))
+
+    def test_validate_result_contract_rejects_missing_fields(self):
+        """Kiểm tra validate_result_contract() phát hiện và từ chối result bị thiếu trường bắt buộc."""
+        result = self._create_valid_result()
+        del result["runtime"]
+        with self.assertRaises(ValueError) as ctx:
+            validate_result_contract(result, self.problem, expected_convergence_len=200)
+        self.assertIn("thiếu các trường bắt buộc", str(ctx.exception))
 
 
 if __name__ == "__main__":

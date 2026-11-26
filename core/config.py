@@ -1,4 +1,6 @@
 """
+core/config.py
+--------------
 Tệp cấu hình tập trung chứa toàn bộ tham số kỹ thuật chuẩn của đồ án UPMS.
 Thống nhất dùng chung cho toàn bộ thành viên (GA, WOA, GUI, Benchmark).
 Không tự ý sửa đổi các hằng số này trong quá trình thực nghiệm chính thức.
@@ -9,7 +11,7 @@ from typing import Any, Dict, List, Tuple
 
 # 1. CẤU HÌNH NGÂN SÁCH ĐÁNH GIÁ (NFE - NUMBER OF FUNCTION EVALUATIONS)
 # Ngân sách cố định cho 1 lượt chạy: 50 khởi tạo + 199 thế hệ * 50 = 10,000 NFE
-# Quy tắc Elitism trong GA:
+# Quy tắc Elitism trong GA (Generational GA with 1-Elitist Replacement):
 #   - Khởi tạo: Đánh giá 50 cá thể ban đầu -> tiêu thụ 50 NFE.
 #   - Mỗi thế hệ t = 1..199: Sinh đúng 50 cá thể con mới (offspring), đánh giá cả 50 con mới -> 50 NFE.
 #   - Gộp 50 con mới + 1 cá thể tinh hoa (Elite giữ từ thế hệ trước, KHÔNG đánh giá lại) = 51 ứng viên.
@@ -23,28 +25,32 @@ MAX_EVALUATIONS: int = 10000        # Trần ngân sách đánh giá hàm mục 
 CONVERGENCE_POINTS: int = 1 + MAX_GENERATIONS  # 200
 
 # 2. CẤU HÌNH THUẬT TOÁN DI TRUYỀN (GA - GENETIC ALGORITHM)
-GA_PC: float = 0.8                  # Xác suất lai ghép cặp (Crossover probability)
-GA_PM: float = 0.05                 # Xác suất đột biến cá thể (Mutation probability)
-GA_TOURNAMENT_K: int = 3            # Kích thước giải đấu chọn lọc (Tournament size)
+GA_PC: float = 0.8                  # Xác suất lai ghép cặp mặc định (Crossover probability)
+GA_PM: float = 0.05                 # Xác suất đột biến trên từng cá thể mặc định (Mutation probability per individual)
+                                    # Khi biến cố xảy ra với xác suất Pm, thuật toán chọn 1 job ngẫu nhiên để đổi máy gán
+GA_TOURNAMENT_K: int = 3            # Kích thước giải đấu chọn lọc mặc định (Tournament size)
 GA_ELITE_COUNT: int = 1             # Số lượng cá thể tinh hoa giữ lại (không đánh giá lại)
 GA_CROSSOVER_TYPE: str = "uniform"  # Loại lai ghép mặc định
 GA_MUTATION_TYPE: str = "resetting" # Loại đột biến mặc định
 
-# Bộ giá trị hợp lệ cho GA (dùng để xác thực tham số)
+# Bộ giá trị hợp lệ cho GA (dùng để xác thực tham số & khảo sát mở rộng)
 VALID_GA_CROSSOVER_TYPES: Tuple[str, ...] = ("uniform", "two_point")
 VALID_GA_MUTATION_TYPES: Tuple[str, ...] = ("resetting", "swap")
+
+# Dải giá trị phục vụ khảo sát tham số riêng biệt của GA (Parameter Sensitivity Analysis):
+GA_PARAM_STUDY_PC: Tuple[float, ...] = (0.6, 0.7, 0.8, 0.9)
+GA_PARAM_STUDY_PM: Tuple[float, ...] = (0.01, 0.05, 0.1, 0.2)
+GA_PARAM_STUDY_K: Tuple[int, ...] = (2, 3, 5)
 
 # 3. CẤU HÌNH THUẬT TOÁN BẦY CÁ VOI (WOA - WHALE OPTIMIZATION ALGORITHM)
 WOA_B: float = 1.0                  # Hằng số định hình xoắn ốc bọt nước (Spiral constant)
 WOA_A_MAX: float = 2.0              # Giá trị ban đầu của hệ số a (khai phá)
 WOA_A_MIN: float = 0.0              # Giá trị kết thúc của hệ số a (khai thác)
 
-# Tên chuẩn 4 biến thể WOA (sử dụng Tuple bất biến để tránh bị thay đổi trong runtime)
+# Cấu hình WOA chuẩn: Chỉ tập trung WOA cơ sở nguyên bản (Mirjalili 2016)
+# Nghiên cứu chuyên sâu về Floor Mapping, Boundary Clamping và Plateau Effect
 WOA_VARIANTS: Tuple[str, ...] = (
-    "baseline",                     # WOA cơ sở (Linear decay a, Clip boundary)
-    "reinit",                       # Biến thể 1: Re-initialization khi vượt biên
-    "cosine",                       # Biến thể 2: Cosine decay schedule cho a
-    "quadratic",                    # Biến thể 3: Quadratic decay schedule cho a
+    "baseline",                     # WOA cơ sở nguyên bản (Linear decay a, Clamping, Floor Mapping)
 )
 VALID_WOA_VARIANTS: Tuple[str, ...] = WOA_VARIANTS
 
@@ -77,8 +83,8 @@ BENCHMARK_RUNS: int = 30            # Số lần chạy độc lập cho mỗi c
 BENCHMARK_SEEDS: List[int] = list(range(1, 31))  # 30 seed ngẫu nhiên cố định [1..30]
 
 # Tổng số lượt chạy thực nghiệm chính thức:
-# (1 GA cơ sở + 4 WOA) x 3 datasets x 30 seeds = 5 x 3 x 30 = 450 runs
-TOTAL_BENCHMARK_RUNS: int = (1 + len(WOA_VARIANTS)) * len(BENCHMARK_DATASETS) * BENCHMARK_RUNS  # 450
+# 2 cấu hình (GA cơ sở vs WOA cơ sở) x 3 datasets x 30 seeds = 2 x 3 x 30 = 180 runs
+TOTAL_BENCHMARK_RUNS: int = (1 + len(WOA_VARIANTS)) * len(BENCHMARK_DATASETS) * BENCHMARK_RUNS  # 180
 
 # Mức ý nghĩa thống kê alpha (kiểm định giả thuyết)
 STATISTICAL_ALPHA: float = 0.05
@@ -99,6 +105,8 @@ def validate_config() -> None:
         raise ValueError(
             f"Mâu thuẫn NFE: {POPULATION_SIZE} + {MAX_GENERATIONS} * {POPULATION_SIZE} = {expected_nfe} != {MAX_EVALUATIONS}"
         )
+    if type(CONVERGENCE_POINTS) is not int or CONVERGENCE_POINTS <= 0:
+        raise ValueError(f"CONVERGENCE_POINTS phải là số nguyên > 0, nhận: {CONVERGENCE_POINTS}")
     if CONVERGENCE_POINTS != 1 + MAX_GENERATIONS:
         raise ValueError(f"CONVERGENCE_POINTS ({CONVERGENCE_POINTS}) phải bằng 1 + MAX_GENERATIONS ({1 + MAX_GENERATIONS})")
 
@@ -125,9 +133,9 @@ def validate_config() -> None:
         raise ValueError(f"WOA_A_MIN phải là số thực hữu hạn, nhận: {WOA_A_MIN}")
     if not (WOA_A_MAX > WOA_A_MIN >= 0.0):
         raise ValueError(f"WOA_A_MAX ({WOA_A_MAX}) phải > WOA_A_MIN ({WOA_A_MIN}) >= 0")
-    if not isinstance(WOA_VARIANTS, tuple) or len(WOA_VARIANTS) != 4 or len(set(WOA_VARIANTS)) != 4:
-        raise ValueError("WOA_VARIANTS phải là tuple gồm đúng 4 biến thể phân biệt")
-    if set(WOA_VARIANTS) != {"baseline", "reinit", "cosine", "quadratic"}:
+    if not isinstance(WOA_VARIANTS, tuple) or len(WOA_VARIANTS) != 1 or len(set(WOA_VARIANTS)) != 1:
+        raise ValueError("WOA_VARIANTS phải là tuple gồm đúng 1 cấu hình cơ sở ('baseline',)")
+    if set(WOA_VARIANTS) != {"baseline"}:
         raise ValueError(f"Danh sách biến thể WOA không đúng quy ước: nhận {WOA_VARIANTS}")
 
     # 4. Tham số Dataset
@@ -135,13 +143,61 @@ def validate_config() -> None:
         raise ValueError(f"PROCESSING_TIME_MIN phải là số nguyên > 0, nhận: {PROCESSING_TIME_MIN}")
     if type(PROCESSING_TIME_MAX) is not int or PROCESSING_TIME_MAX < PROCESSING_TIME_MIN:
         raise ValueError(f"PROCESSING_TIME_MAX ({PROCESSING_TIME_MAX}) phải >= PROCESSING_TIME_MIN ({PROCESSING_TIME_MIN})")
+
+    if not isinstance(BENCHMARK_DATASETS, dict) or not BENCHMARK_DATASETS:
+        raise ValueError("BENCHMARK_DATASETS phải là dictionary không rỗng.")
+    required_datasets = {"small", "medium", "large"}
+    if set(BENCHMARK_DATASETS.keys()) != required_datasets:
+        raise ValueError(
+            f"BENCHMARK_DATASETS phải có chính xác 3 datasets {sorted(required_datasets)}, nhận: {sorted(BENCHMARK_DATASETS.keys())}"
+        )
+
     for ds_name, ds_info in BENCHMARK_DATASETS.items():
+        if not isinstance(ds_info, dict):
+            raise TypeError(f"Cấu hình dataset '{ds_name}' phải là dictionary, nhận: {type(ds_info).__name__}")
+        required_ds_fields = {"num_jobs", "num_machines", "filename"}
+        if set(ds_info.keys()) != required_ds_fields:
+            raise ValueError(
+                f"Dataset '{ds_name}' phải chứa chính xác các trường {sorted(required_ds_fields)}, nhận: {sorted(ds_info.keys())}"
+            )
         if type(ds_info["num_jobs"]) is not int or ds_info["num_jobs"] <= 0:
             raise ValueError(f"Dataset '{ds_name}': num_jobs phải là số nguyên > 0, nhận: {ds_info['num_jobs']}")
         if type(ds_info["num_machines"]) is not int or ds_info["num_machines"] <= 0:
             raise ValueError(f"Dataset '{ds_name}': num_machines phải là số nguyên > 0, nhận: {ds_info['num_machines']}")
+        filename = ds_info["filename"]
+        if not isinstance(filename, str) or not filename.endswith(".json") or len(filename) <= 5:
+            raise ValueError(f"Dataset '{ds_name}': filename phải là chuỗi kết thúc bằng .json, nhận: {filename}")
+        if "/" in filename or "\\" in filename:
+            raise ValueError(f"Dataset '{ds_name}': filename không được chứa đường dẫn thư mục, nhận: {filename}")
 
-    # 5. Tham số Benchmark & Seeds
+    # 5. Dải tham số khảo sát GA độc lập
+    if not isinstance(GA_PARAM_STUDY_PC, tuple) or not GA_PARAM_STUDY_PC:
+        raise ValueError("GA_PARAM_STUDY_PC phải là tuple không rỗng.")
+    if len(set(GA_PARAM_STUDY_PC)) != len(GA_PARAM_STUDY_PC):
+        raise ValueError("Các giá trị Pc trong GA_PARAM_STUDY_PC không được trùng lặp.")
+    for pc_val in GA_PARAM_STUDY_PC:
+        if type(pc_val) not in (int, float) or not math.isfinite(pc_val) or not (0.0 <= pc_val <= 1.0):
+            raise ValueError(f"Giá trị Pc trong GA_PARAM_STUDY_PC phải nằm trong [0.0, 1.0], nhận: {pc_val}")
+
+    if not isinstance(GA_PARAM_STUDY_PM, tuple) or not GA_PARAM_STUDY_PM:
+        raise ValueError("GA_PARAM_STUDY_PM phải là tuple không rỗng.")
+    if len(set(GA_PARAM_STUDY_PM)) != len(GA_PARAM_STUDY_PM):
+        raise ValueError("Các giá trị Pm trong GA_PARAM_STUDY_PM không được trùng lặp.")
+    for pm_val in GA_PARAM_STUDY_PM:
+        if type(pm_val) not in (int, float) or not math.isfinite(pm_val) or not (0.0 <= pm_val <= 1.0):
+            raise ValueError(f"Giá trị Pm trong GA_PARAM_STUDY_PM phải nằm trong [0.0, 1.0], nhận: {pm_val}")
+
+    if not isinstance(GA_PARAM_STUDY_K, tuple) or not GA_PARAM_STUDY_K:
+        raise ValueError("GA_PARAM_STUDY_K phải là tuple không rỗng.")
+    if len(set(GA_PARAM_STUDY_K)) != len(GA_PARAM_STUDY_K):
+        raise ValueError("Các giá trị k trong GA_PARAM_STUDY_K phải phân biệt, không được trùng lặp.")
+    for k_val in GA_PARAM_STUDY_K:
+        if type(k_val) is not int or not (1 <= k_val <= POPULATION_SIZE):
+            raise ValueError(
+                f"Giá trị k trong GA_PARAM_STUDY_K phải là số nguyên trong [1, {POPULATION_SIZE}], nhận: {k_val}"
+            )
+
+    # 6. Tham số Benchmark & Seeds
     if type(BENCHMARK_RUNS) is not int or BENCHMARK_RUNS <= 0:
         raise ValueError(f"BENCHMARK_RUNS phải là số nguyên > 0, nhận: {BENCHMARK_RUNS}")
     if len(BENCHMARK_SEEDS) != BENCHMARK_RUNS:
@@ -151,8 +207,8 @@ def validate_config() -> None:
     if not all(type(s) is int and s > 0 for s in BENCHMARK_SEEDS):
         raise ValueError("Tất cả các seed phải là số nguyên dương > 0")
     expected_total_runs = (1 + len(WOA_VARIANTS)) * len(BENCHMARK_DATASETS) * BENCHMARK_RUNS
-    if TOTAL_BENCHMARK_RUNS != expected_total_runs:
-        raise ValueError(f"TOTAL_BENCHMARK_RUNS ({TOTAL_BENCHMARK_RUNS}) != tính toán {expected_total_runs}")
+    if TOTAL_BENCHMARK_RUNS != expected_total_runs or TOTAL_BENCHMARK_RUNS != 180:
+        raise ValueError(f"TOTAL_BENCHMARK_RUNS ({TOTAL_BENCHMARK_RUNS}) != tính toán {expected_total_runs} (kỳ vọng 180)")
     if type(STATISTICAL_ALPHA) not in (int, float) or not math.isfinite(STATISTICAL_ALPHA) or not (0.0 < STATISTICAL_ALPHA < 1.0):
         raise ValueError(f"STATISTICAL_ALPHA phải là số thực hữu hạn trong (0, 1), nhận: {STATISTICAL_ALPHA}")
 

@@ -14,25 +14,27 @@ Project/
 │   └── evaluator.py            # Quản lý trần 10,000 NFE công bằng cho mọi thuật toán
 ├── algorithms/                 # Triển khai thuật toán tối ưu
 │   ├── __init__.py
-│   ├── genetic.py              # GA: Uniform Crossover, Random Resetting, Tournament, Elitism
-│   └── whale.py                # WOA cơ sở + 3 biến thể: Re-init, Cosine, Quadratic
+│   ├── genetic.py              # GA: Uniform/Two-point Crossover, Resetting/Swap Mutation, Tournament, Elitism
+│   └── whale.py                # WOA cơ sở nguyên bản (Mirjalili 2016) + Floor Mapping, Clamping & Plateau Effect
 ├── gui/                        # Giao diện người dùng PyQt6
 │   ├── __init__.py
 │   ├── main_window.py          # Cửa sổ chính & điều phối đa luồng QThread
 │   ├── gantt_chart.py          # Biểu đồ Gantt trực quan hóa tiến độ các máy
 │   ├── convergence_chart.py    # Biểu đồ đường cong hội tụ qua các thế hệ
-│   ├── ga_widget.py            # Widget thiết lập & điều khiển GA
+│   ├── ga_widget.py            # Widget thiết lập & điều khiển GA (kèm tùy chỉnh toán tử)
 │   ├── woa_widget.py           # Widget thiết lập & điều khiển WOA
 │   └── data_widget.py          # Widget nạp & xem dữ liệu ma trận P
 ├── data/                       # Bộ dữ liệu thực nghiệm chuẩn
 │   ├── small_10x3.json         # Quy mô Small: 10 công việc x 3 máy
 │   ├── medium_30x5.json        # Quy mô Medium: 30 công việc x 5 máy
 │   └── large_100x10.json       # Quy mô Large: 100 công việc x 10 máy
+├── prototype_ga.py             # Script chạy thử nghiệm độc lập GA trên console (10,000 NFE)
 ├── tests/                      # Kiểm thử tự động & thực nghiệm
 │   ├── __init__.py
-│   ├── test_core.py            # 32 unit tests kiểm thử toàn diện gói core.
-│   ├── benchmark_runner.py     # Điều phối chạy tuần tự 450 lượt benchmark
-│   └── statistical_tests.py    # Kiểm định Mann-Whitney U, Wilcoxon & hiệu chỉnh Holm
+│   ├── test_core.py            # 36 unit tests kiểm thử toàn diện gói core
+│   ├── test_genetic.py         # 9 unit tests kiểm thử Giải thuật Di truyền (GA)
+│   ├── benchmark_runner.py     # Điều phối chạy tuần tự 180 lượt benchmark chính thức
+│   └── statistical_tests.py    # Kiểm định Mann-Whitney U / Wilcoxon cho GA vs WOA
 ├── .gitattributes              # Chuẩn hóa ngắt dòng LF giữa macOS và Windows
 ├── .gitignore                  # Bỏ qua file rác cache, môi trường ảo
 ├── requirements.txt            # Thư viện phụ thuộc
@@ -47,7 +49,7 @@ Khuyến nghị sử dụng Python 3.9 trở lên trong môi trường ảo:
 
 ```bash
 # Tạo môi trường ảo
-python3 -m venv venv
+python -m venv venv
 
 # Kích hoạt môi trường ảo:
 # Trên macOS / Linux:
@@ -58,7 +60,7 @@ source venv/bin/activate
 .\venv\Scripts\activate.bat
 
 # Cài đặt các thư viện cần thiết
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 ```
 
 ---

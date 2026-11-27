@@ -1,6 +1,6 @@
 """
 Lớp Evaluator quản lý ngân sách đánh giá hàm mục tiêu (NFE - Number of Function Evaluations).
-Đảm bảo tính công bằng khoa học tuyệt đối giữa GA, WOA cơ sở và các biến thể:
+Đảm bảo tính công bằng khoa học tuyệt đối giữa GA, WOA cơ sở:
 - Mỗi lần gọi evaluate() sẽ kiểm tra trần ngân sách MAX_EVALUATIONS (mặc định 10,000 NFE).
 - Nếu vượt quá ngân sách, tự động ném ngoại lệ RuntimeError để ngăn chặn chạy lố thế hệ.
 - Kiểm tra tính hợp lệ của phương án phân công (assignment) trước khi tính Makespan:

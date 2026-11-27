@@ -49,9 +49,10 @@ def run_woa(
     pop_size = int(params.get("population_size", params.get("pop_size", POPULATION_SIZE)))
     if "max_generations" in params:
         max_iter = int(params["max_generations"])
-        max_nfe = int(params.get("max_nfe", pop_size * (1 + max_iter)))
+        default_nfe = pop_size * (1 + max_iter)
+        max_nfe = int(params.get("max_evaluations", params.get("max_nfe", default_nfe)))
     else:
-        max_nfe = int(params.get("max_nfe", MAX_EVALUATIONS))
+        max_nfe = int(params.get("max_evaluations", params.get("max_nfe", MAX_EVALUATIONS)))
         max_iter = max_nfe // pop_size - 1
 
     b = float(params.get("b", WOA_B))
@@ -65,6 +66,17 @@ def run_woa(
 
     if evaluator is None:
         evaluator = Evaluator(problem, max_evaluations=max_nfe)
+    else:
+        if evaluator.evaluation_count != 0:
+            raise ValueError(
+                f"Evaluator truyền vào đã được sử dụng (evaluation_count={evaluator.evaluation_count}, yêu cầu == 0)."
+            )
+        if evaluator.problem is not problem:
+            raise ValueError("Evaluator truyền vào không gắn với đúng đối tượng UPMSProblem hiện tại.")
+        if evaluator.max_evaluations != max_nfe:
+            raise ValueError(
+                f"Ngân sách của Evaluator ({evaluator.max_evaluations}) không khớp với cấu hình WOA ({max_nfe})."
+            )
 
     rng = np.random.default_rng(seed)
 
@@ -178,7 +190,13 @@ if __name__ == "__main__":
     print("=== KẾT QUẢ CHẠY THỬ WOA PROTOTYPE (SMALL 10x3 - TÍCH HỢP CORE) ===")
     res = run_woa(
         problem,
-        params={"population_size": POPULATION_SIZE, "max_generations": MAX_GENERATIONS, "b": WOA_B, "seed": 42},
+        params={
+            "population_size": POPULATION_SIZE,
+            "max_generations": MAX_GENERATIONS,
+            "max_evaluations": MAX_EVALUATIONS,
+            "b": WOA_B,
+            "seed": 42,
+        },
         callback=progress_callback,
     )
 

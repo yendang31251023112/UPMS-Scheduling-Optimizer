@@ -5,9 +5,9 @@ demo_charts.py - Chạy file này để xem 2 biểu đồ mẫu bằng dữ li�
 import sys
 from PyQt6.QtWidgets import QApplication, QTabWidget
 
-from gantt_chart import GanttChart
-from convergence_chart import ConvergenceChart
-import fake_data
+from gui.gantt_chart import GanttChart
+from gui.convergence_chart import ConvergenceChart
+from data import fake_data
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

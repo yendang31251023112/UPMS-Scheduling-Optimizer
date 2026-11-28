@@ -17,9 +17,9 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QHBoxLayout, QV
                              QGroupBox, QLabel, QComboBox, QPushButton, QTabWidget,
                              QTableWidget, QTableWidgetItem, QMessageBox)
 
-from gantt_chart import GanttChart
-from convergence_chart import ConvergenceChart
-import fake_data                                   # TODO-GHÉP: bỏ khi có code thật
+from gui.gantt_chart import GanttChart
+from gui.convergence_chart import ConvergenceChart
+from data import fake_data                                   # TODO-GHÉP: bỏ khi có code thật
 
 # TODO-GHÉP: bỏ comment khi các bạn đã push code
 # from genetic import run_ga
